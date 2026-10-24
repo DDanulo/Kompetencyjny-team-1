@@ -1,11 +1,13 @@
 ## 2 Wymagania funkcjonalne
 *Słownik aktorów*
 
-- Klient
-- Gość
-- System
+| Aktor  | Opis roli aktora                                                                                                                               |
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| Klient | Uwierzytelniony użytkownik korzystający z usług parkingowych dla przypisanych mu pojazdów i ich rezerwacji. Obiekt `Client` zawiera jego dane. |
+| Gość   | Użytkownik bez uwierzytelnienia. Korzysta z funkcjonalności dostępnych bez logowania.                                                          |
+| System | Aktor wykonujący działania bez inicjatywy użytkownika, w tym zadania wyzwalane czasowo.                                                        |
 
-Słownik aktorów (ról) powinien zawierać wszystkie role występujące w modelu dziedzinowym projektu.
+W modelu danych klient ma odpowiednik w klasie `Client`. Gość i System są rolami bez odrębnych klas.
 
 *Diagramy przypadków użycia*
 
