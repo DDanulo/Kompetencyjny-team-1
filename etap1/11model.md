@@ -12,6 +12,48 @@ Słownik wymienia pojęcia w języku polskim. Jeżeli w realizacji projektu uży
 
 *Diagram klas modelu*
 
-Diagram uwzględniający klasy modelu dziedzinowego wraz z ich atrybutami oraz powiązaniami (w tym - licznością związków).
-Diagram musi uwzględniać wszystkie klasy związane z dziedziną projektu, natomiast nie musi zawierać klas i atrybutów związanych z technicznymi aspektami
-uwierzytelniania, kontroli dostępu i zarządzania kontami w systemie.
+```mermaid
+classDiagram
+    class Vehicle{
+      +UUID vehicleId
+      +String plateNumber
+      +Client client
+    }
+    class Parking{
+      +UUID parkingId
+      +Integer capacity
+      +Duration maxReservationDuration
+      +Duration maxReservationTimeInAdvance
+      +Duration minCancellationTimeInAdvance
+    }
+    class Client{
+      +UUID clientId
+      +String fullName
+    }
+    class Reservation{
+      +UUID reservationId
+      +Vehicle vehicle
+      +Parking parking
+      +DateTime reservationStartDate
+      +DateTime reservationEndDate
+      +Boolean isPaid
+    }
+    class ParkingEvents{
+      +UUID eventId
+      +Vehicle vehicle
+      +DateTime eventTime
+      +EventType eventType
+      +Parking parking
+    }
+    class EventType{
+      <<enumeration>>
+      ENTRY
+      EXIT
+    }
+    Vehicle "0..*" --> "0..1" Client
+    Reservation "0..*" --> "1" Vehicle
+    Reservation "0..*" --> "1" Parking
+    ParkingEvents "0..*" --> "1" Vehicle
+    ParkingEvents ..> EventType
+    ParkingEvents "0..*" --> "1" Parking
+```
