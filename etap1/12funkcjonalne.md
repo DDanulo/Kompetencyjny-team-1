@@ -18,82 +18,117 @@ Jeżeli w modelu dziedzinowym występują przypadki użycia realizowane automaty
 *Diagramy stanów / przejść*
 
 Diagramy obejmują obiekty modelu dziedzinowego, które w swoim cyklu życia zmieniają znaczenie dziedzinowe:
+
 * **Rezerwacja** (`Reservation`),
-* **Pojazd** (`Vehicle`) w kontekście pobytu na Parkingu – stan wyznaczany na podstawie zdarzeń wjazdu i wyjazdu (`ParkingEvents`) oraz rezerwacji.
+* **Pojazd** (`Vehicle`) w kontekście pobytu na Parkingu – cykl życia obecności/wizyty na obiekcie `Parking` wyznaczany
+  wprost na podstawie utrwalanych zdarzeń `ParkingEvents` (`ENTRY`, `EXIT`) oraz powiązanej rezerwacji.
 
 Pominięto:
-* **Parking** – zmiana pojemności lub parametrów rezerwacji jest edycją danych, a nie zmianą stanu,
-* **Klient** – zmiany stanu konta użytkownika nie są objęte diagramami,
-* przypisanie Pojazdu do Klienta – jest to zbudowanie / porzucenie związku z innym obiektem, które nie jest traktowane jako zmiana stanu.
 
-Oznaczenia używane w warunkach: `teraz` – bieżący czas, `start` / `koniec` – `reservationStartDate` / `reservationEndDate`.
+* **Parking** – zmiana pojemności (`capacity`) lub parametrów czasowych rezerwacji jest standardową modyfikacją
+  atrybutów obiektu, a nie przejściem między stanami w cyklu życia,
+* **Klient** – zmiany stanu konta użytkownika nie są objęte zakresem diagramów stanów dziedzinowych,
+* przypisanie Pojazdu do Klienta – jest to powiązanie referencyjne (relacja `Vehicle "0..*" --> "0..1" Client`), a nie
+  zmiana stanu samego obiektu.
 
-**Rezerwacja**
+Oznaczenia używane w warunkach (odnoszące się bezpośrednio do atrybutów modelu danych):
+
+* `teraz` – bieżący czas systemowy,
+* `start` – `reservationStartDate` z encji `Reservation`,
+* `koniec` – `reservationEndDate` z encji `Reservation`.
+
+---
+
+**1. Rezerwacja (`Reservation`)**
+
+Cykl życia obiektu `Reservation` wyznaczany jest przez atrybut `isPaid` oraz relację czasu bieżącego `teraz` do
+przedziału czasowego `[reservationStartDate, reservationEndDate]`, z uwzględnieniem parametrów obiektu `Parking`
+(`maxReservationTimeInAdvance`, `maxReservationDuration`, `minCancellationTimeInAdvance`).
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Nieoplacona : T1
-    Nieoplacona --> Oplacona : T2
-    Nieoplacona --> Anulowana : T3
-    Nieoplacona --> Anulowana : T4
-    Oplacona --> Anulowana : T5
-    Oplacona --> Aktywna : T6
-    Aktywna --> Zakonczona : T7
+    [*] --> Nieoplacona: T1
+    Nieoplacona --> Oplacona: T2
+    Nieoplacona --> Anulowana: T3, T4
+    Oplacona --> Anulowana: T5
+    Oplacona --> Aktywna: T6
+    Aktywna --> Zakonczona: T7
     Anulowana --> [*]
     Zakonczona --> [*]
-
     state "Nieopłacona" as Nieoplacona
     state "Opłacona (oczekuje na rozpoczęcie)" as Oplacona
+    state "Aktywna (w trakcie trwania)" as Aktywna
     state "Anulowana" as Anulowana
     state "Zakończona" as Zakonczona
 ```
 
-| Przejście | Opis (rola: akcja / warunki) |
-|---|---|
-| T1 | Klient: utwórz rezerwację / pojazd przypisany do Klienta; `start − teraz ≤ maxReservationTimeInAdvance`; `koniec − start ≤ maxReservationDuration`; liczba rezerwacji na danym Parkingu nakładających się na przedział `[start, koniec]` mniejsza od limitu miejsc podlegających rezerwacjom; liczba bieżących i przyszłych rezerwacji Klienta mniejsza od limitu |
-| T2 | Klient: opłać rezerwację / `teraz < start`; płatność zakończona powodzeniem (`isPaid = true`) |
-| T3 | Klient: odwołaj rezerwację / `teraz < start` |
-| T4 | System: anuluj nieopłaconą rezerwację (wyzwalane czasowo) / `teraz ≥ start` i rezerwacja nie została opłacona; miejsce zostaje zwolnione |
-| T5 | Klient: odwołaj rezerwację / `teraz ≤ start − minCancellationTimeInAdvance` |
-| T6 | System: rozpocznij rezerwację (wyzwalane czasowo) / `teraz ≥ start` |
-| T7 | System: zakończ rezerwację (wyzwalane czasowo) / `teraz ≥ koniec` |
+| Przejście | Opis (rola: akcja / warunki)                                                                                                                                                                                                                                                                                                                                                                                          |
+|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| T1        | Klient: utwórz rezerwację / pojazd przypisany do Klienta (`vehicle.client == client`); `start − teraz ≤ parking.maxReservationTimeInAdvance`; `koniec − start ≤ parking.maxReservationDuration`; liczba istniejących rezerwacji na danym Parkingu nakładających się na przedział `[start, koniec]` mniejsza od limitu miejsc podlegających rezerwacji (`parking.capacity`); nowo utworzony obiekt ma `isPaid = false` |
+| T2        | Klient: opłać rezerwację / `teraz < start`; poprawna realizacja płatności skutkuje aktualizacją atrybutu `isPaid = true`                                                                                                                                                                                                                                                                                              |
+| T3        | Klient: odwołaj rezerwację / `teraz < start`; rezerwacja w stanie `isPaid = false` zostaje anulowana/usunięta                                                                                                                                                                                                                                                                                                         |
+| T4        | System: anuluj nieopłaconą rezerwację (wyzwalane czasowo) / `teraz ≥ start` oraz `isPaid = false`; zwolnienie zarezerwowanego miejsca                                                                                                                                                                                                                                                                                 |
+| T5        | Klient: odwołaj rezerwację / `teraz ≤ start − parking.minCancellationTimeInAdvance`; opłacona rezerwacja (`isPaid = true`) zostaje anulowana, a środki zwrócone                                                                                                                                                                                                                                                       |
+| T6        | System: rozpocznij rezerwację (wyzwalane czasowo) / `teraz ≥ start` oraz `isPaid = true`                                                                                                                                                                                                                                                                                                                              |
+| T7        | System: zakończ rezerwację (wyzwalane czasowo) / `teraz ≥ koniec`                                                                                                                                                                                                                                                                                                                                                     |
 
-Wjazdy i wyjazdy pojazdu nie zmieniają stanu Rezerwacji – w stanie *Aktywna* umożliwia ona swobodne wjazdy i wyjazdy bez kolejnych opłat, co opisuje diagram pobytu Pojazdu (P1, P3). Rozpoczęcie (T6) i zakończenie (T7) rezerwacji wyzwalają odpowiednio przejścia P8 i P4 pobytu Pojazdu, jeżeli pojazd znajduje się w tym czasie na parkingu.
+Wjazdy i wyjazdy pojazdu nie modyfikują stanu samej Rezerwacji – stan *Aktywna* uprawnia pojazd do wjazdu i wyjazdu w
+zdefiniowanym oknie czasowym bez naliczania dodatkowych opłat, co odzwierciedla diagram pobytu Pojazdu (przejścia P1,
+P3). Rozpoczęcie (T6) oraz zakończenie (T7) rezerwacji synchronizują stan pobytu pojazdu na parkingu (przejścia P8 i
+P4).
 
-Wariant: jeżeli płatność jest realizowana atomowo w ramach utworzenia rezerwacji, stan *Nieopłacona* oraz przejścia T2, T3 i T4 nie występują, a T1 prowadzi bezpośrednio do stanu *Opłacona*.
+*Wariant jednofazowy:* Jeżeli w architekturze systemu płatność pobierana jest atomowo podczas składania rezerwacji, stan
+*Nieopłacona* oraz przejścia T2, T3 i T4 nie występują, a akcja T1 tworzy obiekt od razu z flagą `isPaid = true` w
+stanie *Opłacona*.
 
-**Pojazd – pobyt na Parkingu**
+---
+
+**2. Pojazd – pobyt na Parkingu (`Vehicle`)**
+
+Cykl życia obecności Pojazdu opiera się wprost na rejestrowaniu zdarzeń w tabeli `ParkingEvents` (`EventType.ENTRY`,
+`EventType.EXIT`) powiązanych z danym `Vehicle` i `Parking`:
+
+* Pojazd bez przypisanego klienta (`client == null` w klasie `Vehicle`) reprezentuje pojazd **Gościa** (użytkownika
+  niezarejestrowanego/anonimowego), co bezpośrednio realizuje krotność `0..1` relacji `Vehicle` z `Client`.
+* Fizyczna obecność na terenie parkingu wynika z faktu, że ostatnim zarejestrowanym zdarzeniem w `ParkingEvents` dla
+  danego pojazdu i parkingu jest `ENTRY`.
+* Zdarzenia szlabanowe `ENTRY` i `EXIT` są trwale rejestrowane w bazie (`ParkingEvents`), natomiast uiszczenie opłaty za
+  postój w terminalu (P5) stanowi autoryzację wyjazdu ważną przez dopuszczalny czas na opuszczenie parkingu
+  (`EXIT_GRACE_PERIOD`).
 
 ```mermaid
 stateDiagram-v2
     [*] --> PozaParkingiem
-    PozaParkingiem --> NaParkinguRezerwacja : P1
-    PozaParkingiem --> PostojPlatny : P2
-    NaParkinguRezerwacja --> PozaParkingiem : P3
-    NaParkinguRezerwacja --> PostojPlatny : P4
-    PostojPlatny --> Oplacony : P5
-    Oplacony --> PozaParkingiem : P6
-    Oplacony --> PostojPlatny : P7
-    PostojPlatny --> NaParkinguRezerwacja : P8
-    Oplacony --> NaParkinguRezerwacja : P8
-
+    PozaParkingiem --> NaParkinguRezerwacja: P1
+    PozaParkingiem --> PostojPlatny: P2
+    NaParkinguRezerwacja --> PozaParkingiem: P3
+    NaParkinguRezerwacja --> PostojPlatny: P4
+    PostojPlatny --> Oplacony: P5
+    Oplacony --> PozaParkingiem: P6
+    Oplacony --> PostojPlatny: P7
+    PostojPlatny --> NaParkinguRezerwacja: P8
+    Oplacony --> NaParkinguRezerwacja: P8
+    PozaParkingiem --> [*]
     state "Poza parkingiem" as PozaParkingiem
     state "Na parkingu – w ramach rezerwacji" as NaParkinguRezerwacja
     state "Na parkingu – postój płatny" as PostojPlatny
     state "Postój opłacony (oczekuje na wyjazd)" as Oplacony
 ```
 
-| Przejście | Opis (rola: akcja / warunki) |
-|---|---|
-| P1 | System: zarejestruj wjazd / pojazd posiada aktywną rezerwację na danym Parkingu |
-| P2 | System: zarejestruj wjazd / brak aktywnej rezerwacji; liczba pojazdów na parkingu bez rezerwacji mniejsza niż `capacity − liczba aktywnych rezerwacji`; jeżeli pojazd nie istnieje w Systemie, zostaje automatycznie zarejestrowany (bez powiązania z Klientem) |
-| P3 | System: zarejestruj wyjazd / rezerwacja nadal aktywna – bez opłaty |
-| P4 | System: zakończ rezerwację / pojazd znajduje się na parkingu w chwili `koniec`; opłata naliczana od momentu zakończenia rezerwacji |
-| P5 | Gość lub Klient: opłać postój (w terminalu) / opłata wyliczona na podstawie czasu od wjazdu (lub od zakończenia rezerwacji) uiszczona w całości |
-| P6 | System: zarejestruj wyjazd / czas od opłacenia nie przekracza dopuszczalnego czasu na opuszczenie parkingu |
-| P7 | System: przekroczono czas na wyjazd (wyzwalane czasowo) / czas od opłacenia przekracza dopuszczalny czas na opuszczenie parkingu; naliczana jest dopłata |
-| P8 | System: rozpocznij rezerwację / pojazd wjechał przed `start` i nadal znajduje się na parkingu; opłata za czas od wjazdu do `start` (pomniejszona o kwotę już uiszczoną) doliczana jest do rozliczenia Rezerwacji Klienta |
+| Przejście | Opis (rola: akcja / warunki)                                                                                                                                                                                                                                                                                                                                      |
+|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| P1        | System: zarejestruj wjazd (zapis `ParkingEvents` z `eventType = ENTRY`) / pojazd posiada aktywną rezerwację na danym Parkingu (`isPaid = true` oraz `start ≤ teraz ≤ koniec`); szlaban wjazdowy podnosi się bez pobierania biletu                                                                                                                                 |
+| P2        | System: zarejestruj wjazd (zapis `ParkingEvents` z `eventType = ENTRY`) / brak aktywnej rezerwacji; liczba pojazdów na parkingu bez aktywnej rezerwacji mniejsza niż `parking.capacity − liczba_aktywnych_rezerwacji`; jeżeli numer rejestracyjny (`plateNumber`) nie występuje w bazie, tworzony jest obiekt `Vehicle` z relacją `client = null` (pojazd Gościa) |
+| P3        | System: zarejestruj wyjazd (zapis `ParkingEvents` z `eventType = EXIT`) / rezerwacja nadal aktywna (`teraz ≤ koniec`); wyjazd bez naliczania opłaty                                                                                                                                                                                                               |
+| P4        | System: zakończ rezerwację (wyzwalane czasowo przez T7) / `teraz ≥ koniec`, a ostatnim zdarzeniem pojazdu w `ParkingEvents` jest `ENTRY` (pojazd nie opuścił parkingu przed upływem rezerwacji); od momentu `koniec` rozpoczyna się naliczanie opłaty standardowej za postój płatny                                                                               |
+| P5        | Gość lub Klient: opłać postój (w terminalu) / opłata wyliczona na podstawie czasu od ostatniego `ENTRY` (lub od momentu `koniec` rezerwacji przy P4) uiszczona w całości; system odnotowuje autoryzację wyjazdu                                                                                                                                                   |
+| P6        | System: zarejestruj wyjazd (zapis `ParkingEvents` z `eventType = EXIT`) / czas od opłacenia (P5) nie przekracza dopuszczalnego czasu na opuszczenie parkingu (`teraz − czas_opłacenia ≤ EXIT_GRACE_PERIOD`); szlaban wyjazdowy podnosi się                                                                                                                        |
+| P7        | System: przekroczono czas na wyjazd (wyzwalane czasowo) / `teraz − czas_opłacenia > EXIT_GRACE_PERIOD` przy braku zdarzenia `EXIT`; autoryzacja wygasa i następuje powrót do naliczania opłaty za dodatkowy czas postoju                                                                                                                                          |
+| P8        | System: rozpocznij rezerwację (wyzwalane czasowo przez T6) / `teraz ≥ start`, pojazd znajduje się już na parkingu (ostatnim zdarzeniem jest `ENTRY`); ewentualna opłata za wcześniejszy postój (od wjazdu do `start`) zostaje doliczona do rozliczenia Klienta, a dalszy pobyt przechodzi pod aktywną rezerwację                                                  |
 
-Odmowa wjazdu (brak wolnego miejsca dla pojazdu bez aktywnej rezerwacji) nie zmienia stanu – pojazd pozostaje *Poza parkingiem*, a zdarzenie wjazdu nie jest utrwalane.
+Odmowa wjazdu (brak wolnego miejsca dla pojazdu bez rezerwacji przy wyczerpaniu puli z `parking.capacity`) nie powoduje
+zmiany stanu – pojazd pozostaje w stanie *Poza parkingiem*, a zdarzenie w `ParkingEvents` nie jest rejestrowane.
 
-Stan pobytu nie jest utrwalany jako osobny atrybut – wynika z ostatniego zdarzenia `ParkingEvents` danego Pojazdu na danym Parkingu oraz z aktywnej rezerwacji.
+Stan pobytu nie wymaga osobnego atrybutu w klasie `Vehicle` – wynika bezpośrednio z korelacji ostatniego
+zarejestrowanego zdarzenia `ParkingEvents` danego pojazdu na danym obiekcie `Parking` oraz stanu powiązanego obiektu
+`Reservation`.
