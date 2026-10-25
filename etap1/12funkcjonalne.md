@@ -57,9 +57,10 @@ stateDiagram-v2
 | T5 | Klient: odwołaj rezerwację / `teraz ≤ start − minCancellationTimeInAdvance` |
 | T6 | System: rozpocznij rezerwację (wyzwalane czasowo) / `teraz ≥ start` |
 | T7 | System: zakończ rezerwację (wyzwalane czasowo) / `teraz ≥ koniec` |
+
 Wjazdy i wyjazdy pojazdu nie zmieniają stanu Rezerwacji – w stanie *Aktywna* umożliwia ona swobodne wjazdy i wyjazdy bez kolejnych opłat, co opisuje diagram pobytu Pojazdu (P1, P3). Rozpoczęcie (T6) i zakończenie (T7) rezerwacji wyzwalają odpowiednio przejścia P8 i P4 pobytu Pojazdu, jeżeli pojazd znajduje się w tym czasie na parkingu.
 
-Wariant: jeżeli płatność jest realizowana atomowo w ramach utworzenia rezerwacji, stan *Nieopłacona* oraz przejścia T3 i T4 nie występują, a T1 prowadzi bezpośrednio do stanu *Opłacona*.
+Wariant: jeżeli płatność jest realizowana atomowo w ramach utworzenia rezerwacji, stan *Nieopłacona* oraz przejścia T2, T3 i T4 nie występują, a T1 prowadzi bezpośrednio do stanu *Opłacona*.
 
 **Pojazd – pobyt na Parkingu**
 
