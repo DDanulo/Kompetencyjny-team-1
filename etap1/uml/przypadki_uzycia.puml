@@ -1,0 +1,224 @@
+' ============================================================
+'  Projekt kompetencyjny IAS – System obsługi parkingów
+'  Etap 1 – Diagramy przypadków użycia (5 diagramów)
+'
+'  Osoba A: Gość, Klient, System
+'  Osoba B: Terminal parkingowy, Administrator
+'
+'  Każdy diagram to osobny blok @startuml ... @enduml.
+'  Render: java -jar plantuml.jar przypadki_uzycia.puml
+' ============================================================
+
+
+' ------------------------------------------------------------
+'  [A] 1. Gość (użytkownik nieuwierzytelniony)
+' ------------------------------------------------------------
+@startuml UC_Gosc
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F5F8FF
+  BorderColor #3B5BA9
+}
+skinparam actorBorderColor #3B5BA9
+title Przypadki użycia – Gość
+
+actor "Gość" as Gosc
+
+rectangle "System obsługi parkingów" {
+  usecase "Przeglądaj listę parkingów" as UC_G1
+  usecase "Sprawdź dostępność miejsc" as UC_G2
+}
+
+Gosc --> UC_G1
+Gosc --> UC_G2
+@enduml
+
+
+' ------------------------------------------------------------
+'  [A] 2. Klient
+' ------------------------------------------------------------
+@startuml UC_Klient
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F5F8FF
+  BorderColor #3B5BA9
+}
+skinparam actorBorderColor #3B5BA9
+title Przypadki użycia – Klient
+
+actor "Gość" as Gosc
+actor "Klient" as Klient
+Klient -up-|> Gosc
+
+rectangle "System obsługi parkingów" {
+  usecase "Przeglądaj listę parkingów" as UC_G1
+  usecase "Sprawdź dostępność miejsc" as UC_G2
+
+  usecase "Zarejestruj pojazd" as UC_K1
+  usecase "Przeglądaj swoje pojazdy" as UC_K2
+  usecase "Usuń pojazd z konta" as UC_K3
+
+  usecase "Utwórz rezerwację" as UC_K4
+  usecase "Sprawdź możliwość rezerwacji" as UC_K5
+  usecase "Opłać rezerwację" as UC_K6
+  usecase "Odwołaj rezerwację" as UC_K7
+  usecase "Przeglądaj swoje rezerwacje" as UC_K8
+
+  usecase "Przeglądaj historię parkowań" as UC_K9
+}
+
+Gosc --> UC_G1
+Gosc --> UC_G2
+
+Klient --> UC_K1
+Klient --> UC_K2
+Klient --> UC_K3
+Klient --> UC_K4
+Klient --> UC_K7
+Klient --> UC_K8
+Klient --> UC_K9
+
+UC_K4 ..> UC_K5 : <<include>>
+UC_K4 ..> UC_K6 : <<include>>
+
+note right of UC_K5
+  - wolne miejsca w puli rezerwacyjnej parkingu
+  - maks. wyprzedzenie utworzenia
+  - maks. długość rezerwacji
+  - limit bieżących/przyszłych rezerwacji klienta
+end note
+@enduml
+
+
+' ------------------------------------------------------------
+'  [A] 3. System (zdarzenia czasowe)
+' ------------------------------------------------------------
+@startuml UC_System
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F5F8FF
+  BorderColor #3B5BA9
+}
+skinparam actorBorderColor #3B5BA9
+title Przypadki użycia – System
+
+actor "System\n(zegar)" as Sys <<system>>
+
+rectangle "System obsługi parkingów" {
+  usecase "Rozpocznij rezerwację" as UC_S1
+  usecase "Zakończ rezerwację" as UC_S2
+  usecase "Oznacz rezerwację\njako niewykorzystaną" as UC_S3
+}
+
+Sys --> UC_S1
+Sys --> UC_S2
+Sys --> UC_S3
+
+note right of UC_S1 : nadszedł czas początku rezerwacji
+note right of UC_S2 : upłynął czas końca rezerwacji
+note right of UC_S3 : koniec rezerwacji bez żadnego wjazdu pojazdu
+@enduml
+
+
+' ------------------------------------------------------------
+'  [B] 4. Terminal parkingowy (system zewnętrzny, REST)
+' ------------------------------------------------------------
+@startuml UC_Terminal
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F5F8FF
+  BorderColor #3B5BA9
+}
+skinparam actorBorderColor #3B5BA9
+title Przypadki użycia – Terminal parkingowy
+
+actor "Terminal\nparkingowy" as Terminal <<system>>
+
+rectangle "System obsługi parkingów" {
+  usecase "Zgłoś wjazd pojazdu" as UC_T1
+  usecase "Zidentyfikuj pojazd" as UC_T2
+  usecase "Sprawdź prawo wjazdu" as UC_T3
+  usecase "Zarejestruj pojazd\nautomatycznie" as UC_T4
+
+  usecase "Zgłoś wyjazd pojazdu" as UC_T5
+  usecase "Wylicz opłatę" as UC_T6
+
+  usecase "Zarejestruj płatność" as UC_T7
+}
+
+Terminal --> UC_T1
+Terminal --> UC_T5
+Terminal --> UC_T7
+
+UC_T1 ..> UC_T2 : <<include>>
+UC_T1 ..> UC_T3 : <<include>>
+UC_T4 ..> UC_T1 : <<extend>>
+
+UC_T5 ..> UC_T2 : <<include>>
+UC_T5 ..> UC_T6 : <<include>>
+
+note right of UC_T4
+  warunek: pierwszy wjazd pojazdu
+  na dowolny parking systemu;
+  pojazd bez przypisanego Klienta
+end note
+
+note right of UC_T3
+  ważna rezerwacja pojazdu
+  LUB wolne miejsce
+  poza pulą rezerwacyjną
+end note
+
+note right of UC_T6
+  0 zł, jeśli postój
+  objęty rezerwacją
+end note
+@enduml
+
+
+' ------------------------------------------------------------
+'  [B] 5. Administrator
+' ------------------------------------------------------------
+@startuml UC_Administrator
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F5F8FF
+  BorderColor #3B5BA9
+}
+skinparam actorBorderColor #3B5BA9
+title Przypadki użycia – Administrator
+
+actor "Administrator" as Admin
+
+rectangle "System obsługi parkingów" {
+  usecase "Dodaj parking" as UC_A1
+  usecase "Edytuj parametry parkingu" as UC_A2
+  usecase "Ustal limit\nrezerwacji klienta" as UC_A5
+  usecase "Przeglądaj wjazdy\ni wyjazdy" as UC_A6
+  usecase "Przeglądaj rezerwacje" as UC_A7
+}
+
+Admin --> UC_A1
+Admin --> UC_A2
+Admin --> UC_A5
+Admin --> UC_A6
+Admin --> UC_A7
+
+note right of UC_A2
+  - pojemność
+  - limit miejsc rezerwacyjnych
+  - maks. wyprzedzenie rezerwacji
+  - min. wyprzedzenie odwołania
+  - maks. długość rezerwacji
+end note
+@enduml
