@@ -203,20 +203,17 @@ actor "Administrator" as Admin
 rectangle "System obsługi parkingów" {
   usecase "Dodaj parking" as UC_A1
   usecase "Edytuj parametry parkingu" as UC_A2
-  usecase "Ustal limit\nrezerwacji klienta" as UC_A5
   usecase "Przeglądaj wjazdy\ni wyjazdy" as UC_A6
   usecase "Przeglądaj rezerwacje" as UC_A7
 }
 
 Admin --> UC_A1
 Admin --> UC_A2
-Admin --> UC_A5
 Admin --> UC_A6
 Admin --> UC_A7
 
 note right of UC_A2
   - pojemność
-  - limit miejsc rezerwacyjnych
   - maks. wyprzedzenie rezerwacji
   - min. wyprzedzenie odwołania
   - maks. długość rezerwacji
