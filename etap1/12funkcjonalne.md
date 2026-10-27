@@ -1,21 +1,37 @@
 ## 2 Wymagania funkcjonalne
 *Słownik aktorów*
 
-| Aktor  | Opis roli aktora                                                                                                                               |
-|--------|------------------------------------------------------------------------------------------------------------------------------------------------|
-| Klient | Uwierzytelniony użytkownik korzystający z usług parkingowych dla przypisanych mu pojazdów i ich rezerwacji. Obiekt `Client` zawiera jego dane. |
-| Gość   | Użytkownik bez uwierzytelnienia. Korzysta z funkcjonalności dostępnych bez logowania.                                                          |
-| System | Aktor wykonujący działania bez inicjatywy użytkownika, w tym zadania wyzwalane czasowo.                                                        |
+| Aktor               | Opis roli aktora                                                                                                                                                                                                                                                                                                                                 |
+|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Gość                | Użytkownik bez uwierzytelnienia. Korzysta z funkcjonalności dostępnych bez logowania.                                                                                                                                                                                                                                                            |
+| Klient              | Uwierzytelniony użytkownik korzystający z usług parkingowych dla przypisanych mu pojazdów i ich rezerwacji. Obiekt `Client` zawiera jego dane.                                                                                                                                                                                                   |
+| System              | Aktor wykonujący działania bez inicjatywy użytkownika, w tym zadania wyzwalane czasowo.                                                                                                                                                                                                                                                          |
+| Terminal parkingowy | Zewnętrzny system (urządzenie dostawcy) komunikujący się z systemem centralnym przez REST. Zgłasza wjazdy i wyjazdy pojazdów rozpoznanych po numerze rejestracyjnym, na tej podstawie powstają obiekty `ParkingEvents`. Przy pierwszym wjeździe nieznanego pojazdu powoduje jego automatyczną rejestrację (`Vehicle` bez przypisanego `Client`). |
+| Administrator       | Uwierzytelniony pracownik Przedsiębiorstwa zarządzający danymi parkingów (`Parking`): dodaje je i ustala ich parametry (pojemność oraz limity czasowe rezerwacji). Ma wgląd w rezerwacje i zdarzenia wjazdu/wyjazdu na wszystkich parkingach.                                                                                                    |
 
-W modelu danych klient ma odpowiednik w klasie `Client`. Gość i System są rolami bez odrębnych klas.
+W modelu danych klient ma odpowiednik w klasie `Client`. Gość, System, Terminal parkingowy i Administrator są rolami bez odrębnych klas.
 
 *Diagramy przypadków użycia*
 
-Dla każdej z wymienionych ról wymagany jest diagram UML przypadków użycia występujących w modelu dziedzinowym projektu, bez uwzględniania przypadków użycia związanych z technicznym aspektem uwierzytelniania, kontroli dostępu i obsługi kont systemu.
+![gosc.png](img/gosc.png)
 
-Jeżeli w modelu dziedzinowym występują przypadki użycia dostępne dla użytkownika nieuwierzytelnionego (anonimowego) należy wykazać taką rolę i zamieścić odpowiedni diagram.
+Wykres 1.2.1 - Diagram przypadków użycia dla aktora Gość
 
-Jeżeli w modelu dziedzinowym występują przypadki użycia realizowane automatycznie (nie z inicjatywy użytkownika, np. wyzwalane czasowo) należy wykazać rolę System i zamieścić odpowiedni diagram.
+![klient.png](img/klient.png)
+
+Wykres 1.2.2 - Diagram przypadków użycia dla aktora Klient
+
+![system.png](img/system.png)
+
+Wykres 1.2.3 - Diagram przypadków użycia dla aktora System
+
+![terminal.png](img/terminal.png)
+
+Wykres 1.2.4 - Diagram przypadków użycia dla aktora Terminal parkingowy
+
+![administrator.png](img/administrator.png)
+
+Wykres 1.2.5 - Diagram przypadków użycia dla aktora Administrator
 
 *Diagramy stanów / przejść*
 
