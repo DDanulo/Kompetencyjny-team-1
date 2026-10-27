@@ -1,19 +1,27 @@
 ## 2 Wymagania funkcjonalne
 *Słownik aktorów*
 
-- Klient
 - Gość
+- Klient
 - System
+- Terminal parkingowy
+- Administrator
 
 Słownik aktorów (ról) powinien zawierać wszystkie role występujące w modelu dziedzinowym projektu.
 
 *Diagramy przypadków użycia*
 
-Dla każdej z wymienionych ról wymagany jest diagram UML przypadków użycia występujących w modelu dziedzinowym projektu, bez uwzględniania przypadków użycia związanych z technicznym aspektem uwierzytelniania, kontroli dostępu i obsługi kont systemu.
+![gosc.png](img/gosc.png)
 
-Jeżeli w modelu dziedzinowym występują przypadki użycia dostępne dla użytkownika nieuwierzytelnionego (anonimowego) należy wykazać taką rolę i zamieścić odpowiedni diagram.
+Wykres 1.2.1 - Diagram przypadków użycia dla aktora Gość
 
-Jeżeli w modelu dziedzinowym występują przypadki użycia realizowane automatycznie (nie z inicjatywy użytkownika, np. wyzwalane czasowo) należy wykazać rolę System i zamieścić odpowiedni diagram.
+![klient.png](img/klient.png)
+
+Wykres 1.2.2 - Diagram przypadków użycia dla aktora Klient
+
+![system.png](img/system.png)
+
+Wykres 1.2.3 - Diagram przypadków użycia dla aktora System
 
 *Diagramy stanów / przejść*
 
