@@ -23,6 +23,14 @@ Wykres 1.2.2 - Diagram przypadków użycia dla aktora Klient
 
 Wykres 1.2.3 - Diagram przypadków użycia dla aktora System
 
+![terminal.png](img/terminal.png)
+
+Wykres 1.2.4 - Diagram przypadków użycia dla aktora Terminal parkingowy
+
+![administrator.png](img/administrator.png)
+
+Wykres 1.2.5 - Diagram przypadków użycia dla aktora Administrator
+
 *Diagramy stanów / przejść*
 
 Należy zaprezentować diagram(y) stanów (przejść) dla tych obiektów modelu dziedzinowego, które w ramach swojego cyklu życia zmieniają stan (w sensie zmiany
