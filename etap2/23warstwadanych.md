@@ -1,67 +1,10 @@
 ## 5 Warstwa danych
 
 Dane systemu są zapisywane w relacyjnej bazie danych **PostgreSQL**. Warstwa logiki łączy się z nią przez bibliotekę
-`sqlx` ze sterownikiem `pgx` i wysyła zwykłe zapytania SQL, bez ORM (z uwagi na wybór języka Go). Schemat bazy jest opisany w
-skryptach SQL, które `golang-migrate` wykonuje przy starcie aplikacji, więc każda zmiana schematu ma swoją wersję w
-repozytorium kodu.
+`sqlx` ze sterownikiem `pgx` i wysyła zwykłe zapytania SQL, bez ORM (z uwagi na wybór języka Go).
 
 Klasy modelu odpowiadają tabelom: `client`, `vehicle`, `parking`, `reservation` i `parking_events`.
 Bieżący stan zajętości parkingu i liczba wolnych miejsc nie mają własnych tabel, bo są wyliczane dodatkowymi zapytaniami.
-
-```sql
-CREATE TABLE client (
-    client_id uuid PRIMARY KEY,
-    full_name text NOT NULL
-);
-
-CREATE TABLE vehicle (
-    vehicle_id   uuid PRIMARY KEY,
-    plate_number text NOT NULL UNIQUE,
-    client_id    uuid REFERENCES client
-);
-
-CREATE TABLE parking (
-    parking_id                           uuid PRIMARY KEY,
-    capacity                             integer NOT NULL CHECK (capacity > 0),
-    max_reservation_duration_min         integer NOT NULL,
-    max_reservation_time_in_advance_min  integer NOT NULL,
-    min_cancellation_time_in_advance_min integer NOT NULL
-);
-
-CREATE TABLE reservation (
-    reservation_id         uuid PRIMARY KEY,
-    vehicle_id             uuid NOT NULL REFERENCES vehicle,
-    parking_id             uuid NOT NULL REFERENCES parking,
-    reservation_start_date timestamptz NOT NULL,
-    reservation_end_date   timestamptz NOT NULL,
-    is_paid                boolean NOT NULL DEFAULT false,
-    cancelled_at           timestamptz,
-    CHECK (reservation_end_date > reservation_start_date)
-);
-
-CREATE TYPE event_type AS ENUM ('ENTRY', 'EXIT');
-
-CREATE TABLE parking_events (
-    event_id   uuid PRIMARY KEY,
-    vehicle_id uuid NOT NULL REFERENCES vehicle,
-    parking_id uuid NOT NULL REFERENCES parking,
-    event_time timestamptz NOT NULL,
-    event_type event_type NOT NULL
-);
-
-CREATE INDEX ON reservation (parking_id, reservation_start_date, reservation_end_date);
-CREATE INDEX ON parking_events (parking_id, vehicle_id, event_time);
-```
-Listing 2.3.1 Schemat bazy danych - skrypt migracji `000001_init.up.sql`
-
-Czas z klasy `Parking` (`maxReservationDuration` itd.) jest zapisany jako liczba minut. Wszystkie znaczniki czasu mają
-typ `timestamptz`, więc baza przechowuje je w UTC niezależnie od strefy czasowej serwera.
-
-Kolumna `cancelled_at` nie występuje w diagramie klas, ale jest potrzebna do utrwalenia stanu *Anulowana* z diagramu
-stanów rezerwacji. Pozostałe stany wynikają z `is_paid` i bieżącego czasu, a anulowania
-nie da się z nich odczytać. Anulowana rezerwacja nie jest usuwana, bo Klient dostaje zwrot opłaty, a zapis
-pozostaje dowodem rozliczenia. Anulowanie ustawia jedynie czas w `cancelled_at`, a zapytania sprawdzające limity dostępnych miejsc
-pomijają takie rezerwacje.
 
 *Uzasadnienie wyboru*
 
@@ -96,8 +39,8 @@ kilka kolekcji naraz, więc i tak potrzebne byłyby transakcje i blokady, które
 Przy starcie programu powstaje jedna pula połączeń `*sqlx.DB`, która trafia do obiektów `Service` z poszczególnych
 pakietów. Adres bazy i hasło pochodzą ze zmiennej środowiskowej, a nie z kodu.
 
-Wymagania ograniczają łączną liczbę bieżących i przyszłych rezerwacji Klienta, ale model z
-rozdz. 1 nie określa wartości tego limitu. Dlatego jest on parametrem konfiguracji aplikacji
+Wymagania ograniczają łączną liczbę bieżących i przyszłych rezerwacji Klienta. Wartość tego limitu jest
+parametrem konfiguracji aplikacji
 (`MAX_CLIENT_RESERVATIONS`), wspólnym dla wszystkich Klientów, a nie kolumną w bazie.
 
 ```go
@@ -131,7 +74,7 @@ func main() {
 	log.Fatal(api.NewRouter(reservations).Run(":8080"))
 }
 ```
-Listing 2.3.2 Utworzenie puli połączeń z bazą w pakiecie `main`
+Listing 2.3.1 Utworzenie puli połączeń z bazą w pakiecie `main`
 
 Metoda `Create` z pakietu `reservation`, którą wywołuje handler `POST /api/reservations`. Realizuje
 ona tworzenie rezerwacji w jednej transakcji.
@@ -270,7 +213,7 @@ func (s *Service) Create(ctx context.Context, clientID uuid.UUID, req CreateRequ
 	return r, nil
 }
 ```
-Listing 2.3.3 Utworzenie rezerwacji w bazie w pakiecie `reservation`
+Listing 2.3.2 Utworzenie rezerwacji w bazie w pakiecie `reservation`
 
 Struktura `Reservation` odpowiada wierszowi tabeli `reservation`. Tagi `db` łączą pola struktury z kolumnami tabeli,
 dzięki czemu `sqlx` sam wypełnia struktury wynikami zapytań (`GetContext`) i podstawia ich pola do zapytań z
