@@ -43,6 +43,7 @@ var (
 	ErrVehicleNotOwned = errors.New("reservation: vehicle not owned by client")
 	ErrOutsideLimits   = errors.New("reservation: outside parking time limits")
 	ErrNoFreeSpace     = errors.New("reservation: no free space")
+	ErrClientLimit     = errors.New("reservation: client reservation limit reached")
 )
 
 type CreateRequest struct {
@@ -52,7 +53,7 @@ type CreateRequest struct {
 	End       time.Time `json:"reservationEndDate" binding:"required,gtfield=Start"`
 }
 ```
-Listing 2.2.1 Dane żądania utworzenia rezerwacji w pakiecie `reservation`
+Listing 2.2.1 - Dane żądania utworzenia rezerwacji w pakiecie `reservation`
 
 ```go
 package api
@@ -102,13 +103,15 @@ func (h *handler) createReservation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "rezerwacja przekracza limity czasu parkingu"})
 	case errors.Is(err, reservation.ErrNoFreeSpace):
 		c.JSON(http.StatusConflict, gin.H{"error": "brak wolnych miejsc na parkingu"})
+	case errors.Is(err, reservation.ErrClientLimit):
+		c.JSON(http.StatusConflict, gin.H{"error": "osiągnięto limit rezerwacji klienta"})
 	default:
 		slog.ErrorContext(c.Request.Context(), "request failed", "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "błąd serwera"})
 	}
 }
 ```
-Listing 2.2.2 Udostępnienie metody `Create` jako `POST /api/reservations` w pakiecie `api`
+Listing 2.2.2 - Udostępnienie metody `Create` jako `POST /api/reservations` w pakiecie `api`
 
 Struktura `CreateRequest` opisuje dane przesyłane w żądaniu. Handler korzysta z logiki rezerwacji
 przez metodę `Create` typu `Service` z pakietu `reservation`. Metoda `Create` dostaje kontekst żądania, identyfikator Klienta 
@@ -127,7 +130,7 @@ tokenu przez `auth.RequireClient`.
    i danymi rezerwacji. `Create` sprawdza pozostałe warunki i zapisuje rezerwację w bazie.
 4. Handler zamienia wynik na odpowiedź. Udany zapis daje `201 Created` z rezerwacją w stanie *Nieopłacona*.
    Nieznany parking daje `404 Not Found`, cudzy pojazd `403 Forbidden`, złamanie warunku rezerwacji `400 Bad Request`,
-   brak wolnych miejsc `409 Conflict`, a każdy inny błąd trafia do dziennika zdarzeń i daje `500 Internal Server Error`.
+   brak wolnych miejsc i osiągnięcie limitu rezerwacji Klienta `409 Conflict`, a każdy inny błąd trafia do dziennika zdarzeń i daje `500 Internal Server Error`.
 
 *Wybór architektury*
 
