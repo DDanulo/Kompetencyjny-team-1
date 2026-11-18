@@ -90,7 +90,7 @@ Aplikacja kliencka to pliki statyczne wykonywane w przeglądarce. Można je udos
 
 **Warstwa logiki (REST API)**
 
-Instancje `parking-api` można powielać, bo są bezstanowe. Stan konwersacyjny niesie token JWT (rozdz. 7), który każda instancja weryfikuje tym samym kluczem, a stan dziedzinowy, w tym autoryzacja wyjazdu po opłaceniu postoju (P5), jest zapisywany w bazie. Bieżąca zajętość jest wyliczana z bazy, a identyfikatory to UUID generowane niezależnie w każdej instancji. Load balancer może więc kierować każde żądanie do dowolnej instancji, bez *sticky sessions*.
+Instancje `parking-api` można powielać, bo są bezstanowe. Stan konwersacyjny przechowuje klient: dane odebrane z serwera trzyma u siebie, a w każdym żądaniu przesyła token JWT i komplet potrzebnych danych. Każda instancja weryfikuje token tym samym kluczem, a stan dziedzinowy, w tym autoryzacja wyjazdu po opłaceniu postoju (P5), jest zapisywany w bazie. Bieżąca zajętość jest wyliczana z bazy, a identyfikatory to UUID generowane niezależnie w każdej instancji. Load balancer może więc kierować każde żądanie do dowolnej instancji, bez *sticky sessions*.
 
 Przy kilku instancjach trzeba jednak zachować trzy zasady:
 
