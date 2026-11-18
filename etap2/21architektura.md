@@ -64,6 +64,7 @@ flowchart LR
         SPA[Aplikacja SPA<br/>Klient / Gość / Administrator]
         T[Terminale parkingowe]
     end
+    OP[Operator płatności]
     subgraph S[Kontekst serwera]
         CDN[Serwer plików statycznych / CDN]
         LB[Load balancer<br/>HTTPS]
@@ -71,11 +72,12 @@ flowchart LR
         A2[Instancja API 2]
         AN[Instancja API N]
         DB[(Baza danych<br/>instancja główna)]
-        R[(Replika<br/>tylko do odczytu)]
+        R[(Replika tylko do odczytu<br/>opcjonalnie)]
     end
     SPA --> CDN
     SPA --> LB
     T --> LB
+    OP -.powiadomienie o płatności.-> LB
     LB --> A1 & A2 & AN
     A1 & A2 & AN --> DB
     A1 & A2 & AN -.odczyty raportowe.-> R
@@ -92,26 +94,19 @@ Aplikacja kliencka to pliki statyczne wykonywane w przeglądarce. Można je udos
 
 Instancje `parking-api` można powielać, bo są bezstanowe. Stan konwersacyjny przechowuje klient: dane odebrane z serwera trzyma u siebie, a w każdym żądaniu przesyła token JWT i komplet potrzebnych danych. Każda instancja weryfikuje token tym samym kluczem, a stan dziedzinowy, w tym autoryzacja wyjazdu po opłaceniu postoju (P5), jest zapisywany w bazie. Bieżąca zajętość jest wyliczana z bazy, a identyfikatory to UUID generowane niezależnie w każdej instancji. Load balancer może więc kierować każde żądanie do dowolnej instancji, bez *sticky sessions*.
 
-Przy kilku instancjach trzeba jednak zachować trzy zasady:
+Przy kilku instancjach trzeba jednak zachować cztery zasady:
 
 | Problem                                        | Skutek przy N instancjach                                                                                   | Rozwiązanie                                                                                                                                                                    |
 |------------------------------------------------|-------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Kontrola limitu miejsc (T1, P2)                | Blokada w pamięci procesu (np. `sync.Mutex`) działa tylko w jednej instancji, więc dwie mogą przekroczyć `capacity` | Blokada wiersza parkingu w bazie (`SELECT ... FOR UPDATE`) w transakcji tworzącej rezerwację (rozdz. 5 i 8)                                                                     |
-| Zadania wyzwalane czasowo (T4, T6, T7, P4, P7) | Każda instancja wykonałaby to samo zadanie, np. kilka razy zwróciła środki                                  | Zadania działają w każdej instancji (`time.Ticker`), ale wykonuje je tylko ta, która pobierze blokadę doradczą `pg_try_advisory_xact_lock`. Operacje są warunkowe (`UPDATE ... WHERE is_paid = false AND ...`) |
+| Kontrola limitu miejsc (T1, P2)                | Blokada w pamięci procesu (np. `sync.Mutex`) działa tylko w jednej instancji, więc dwie mogą przekroczyć `capacity` | Blokada wiersza parkingu w bazie (`SELECT ... FOR UPDATE`) zarówno w transakcji tworzącej rezerwację (T1), jak i w transakcji rejestrującej wjazd (P2), bo obie korzystają z tej samej puli miejsc (rozdz. 4, 5 i 8) |
+| Zadania wyzwalane czasowo (T4, P4, P7, P8)     | Każda instancja wykonałaby to samo zadanie, np. kilka razy doliczyła Klientowi opłatę za postój przed rozpoczęciem rezerwacji (P8) | Zadania działają w każdej instancji (`time.Ticker`), ale wykonuje je tylko ta, która pobierze blokadę doradczą `pg_try_advisory_xact_lock`. Operacje są warunkowe (`UPDATE ... WHERE is_paid = false AND ...`) |
 | Ponowienie żądania przez terminal              | Ponowione zgłoszenie wjazdu trafi do innej instancji i powstanie drugie zdarzenie `ENTRY`                   | Klucz idempotencji zdarzenia z ograniczeniem `UNIQUE` w bazie                                                                                                                  |
+| Ponowione powiadomienie operatora płatności (T2) | Operator ponawia powiadomienie, gdy nie dostanie odpowiedzi, a kolejne próby trafiają do różnych instancji, więc płatność mogłaby zostać rozliczona kilka razy | Zmiana warunkowa (`UPDATE ... SET is_paid = true WHERE ... AND is_paid = false`), dzięki której ponowione powiadomienie niczego nie zmienia |
+
+Przejścia T6 i T7 nie wymagają zadań okresowych. Stany *Aktywna* i *Zakończona* wynikają z porównania bieżącego czasu z `reservationStartDate` i `reservationEndDate`, więc każda instancja wylicza je przy odczycie i nie trzeba ich synchronizować między instancjami.
 
 **Warstwa danych**
 
-Baza danych jest jedynym komponentem wspólnym dla wszystkich instancji API i to ona ogranicza skalowanie. Reguły limitów wymagają aktualnych danych, więc wszystkie zapisy i odczyty, na podstawie których zapada decyzja (wolne miejsca przy T1 i P2), obsługuje jedna instancja główna. Zapytania niewymagające najświeższych danych, np. przegląd historii przez Administratora, mogą trafiać do replik tylko do odczytu.
-
-**Ocena**
-
-| Komponent                 | Skalowanie horyzontalne | Uwagi                                                       |
-|---------------------------|-------------------------|-------------------------------------------------------------|
-| SPA (pliki statyczne)     | Pełne                   | Serwer plików / CDN                                         |
-| REST API                  | Pełne                   | Bezstanowe instancje, blokady i idempotencja po stronie bazy |
-| Zadania wyzwalane czasowo | Ograniczone             | Jedno wykonanie na raz dzięki blokadzie doradczej           |
-| Baza danych - odczyty     | Możliwe                 | Repliki do odczytu dla zapytań raportowych                  |
-| Baza danych - zapisy      | Brak                    | Jedna instancja główna, skalowana wertykalnie               |
+Baza danych jest jedynym komponentem wspólnym dla wszystkich instancji API i to ona ogranicza skalowanie. Reguły limitów wymagają aktualnych danych, więc wszystkie zapisy i odczyty, na podstawie których zapada decyzja (wolne miejsca przy T1 i P2), obsługuje jedna instancja główna. Zapytania niewymagające najświeższych danych, np. przegląd historii przez Administratora, mogą trafiać do repliki tylko do odczytu, jeśli zostanie ona dodana wraz ze wzrostem ruchu.
 
 Architektura pozwala więc powielać warstwę logiki bez zmian w kodzie, a wąskim gardłem pozostaje instancja główna bazy danych. Przy przewidywanej skali (kilka–kilkanaście parkingów) jedna instancja API wystarcza pod względem wydajności, a liczbę instancji ze względu na dostępność określa rozdz. 6.
