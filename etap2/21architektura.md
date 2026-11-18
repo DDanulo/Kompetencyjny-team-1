@@ -1,9 +1,9 @@
 ## 3 Architektura
 *Diagram perspektywy wdrożenia*
 
-Należy zaprezentować diagram perspektywy wdrożenia obejmujący wszystkie warstwy systemu. Na diagramie należy zaznaczyć granicę pomiędzy tymi częściami
-systemu, które działają w kontekście użytkownika (są wykonywane w systemie operacyjnym kontrolowanym przez użytkownika) oraz tymi, które działają w kontekście
-serwera (są wykonywane w systemie operacyjnym / systemach operacyjnych kontrolowanym / kontrolowanych przez administratorów wdrożenia systemu).
+![wdrozenie.png](img/wdrozenie.png)
+
+Wykres 3.1.1 - Diagram perspektywy wdrożenia
 
 *Stan konwersacyjny*
 
