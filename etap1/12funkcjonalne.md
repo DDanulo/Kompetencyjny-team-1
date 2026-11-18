@@ -38,16 +38,13 @@ Wykres 1.2.5 - Diagram przypadków użycia dla aktora Administrator
 Diagramy obejmują obiekty modelu dziedzinowego, które w swoim cyklu życia zmieniają znaczenie dziedzinowe:
 
 * **Rezerwacja** (`Reservation`),
-* **Pojazd** (`Vehicle`) w kontekście postoju na Parkingu – cykl życia obecności/wizyty na obiekcie `Parking` wyznaczany
-  wprost na podstawie utrwalanych zdarzeń `ParkingEvents` (`ENTRY`, `EXIT`) oraz powiązanej rezerwacji.
+* **Pojazd** (`Vehicle`) w kontekście postoju na Parkingu – cykl życia obecności/wizyty na obiekcie `Parking` wyznaczany wprost na podstawie utrwalanych zdarzeń `ParkingEvents` (`ENTRY`, `EXIT`) oraz powiązanej rezerwacji.
 
 Pominięto:
 
-* **Parking** – zmiana pojemności (`capacity`) lub parametrów czasowych rezerwacji jest standardową modyfikacją
-  atrybutów obiektu, a nie przejściem między stanami w cyklu życia,
+* **Parking** – zmiana pojemności (`capacity`) lub parametrów czasowych rezerwacji jest standardową modyfikacją atrybutów obiektu, a nie przejściem między stanami w cyklu życia,
 * **Klient** – zmiany stanu konta użytkownika nie są objęte zakresem diagramów stanów dziedzinowych,
-* przypisanie Pojazdu do Klienta – jest to powiązanie referencyjne (relacja `Vehicle "0..*" --> "0..1" Client`), a nie
-  zmiana stanu samego obiektu.
+* przypisanie Pojazdu do Klienta – jest to powiązanie referencyjne (relacja `Vehicle "0..*" --> "0..1" Client`), a nie zmiana stanu samego obiektu.
 
 Oznaczenia używane w warunkach (odnoszące się bezpośrednio do atrybutów modelu danych):
 
@@ -59,9 +56,7 @@ Oznaczenia używane w warunkach (odnoszące się bezpośrednio do atrybutów mod
 
 **1. Rezerwacja (`Reservation`)**
 
-Cykl życia obiektu `Reservation` wyznaczany jest przez atrybut `isPaid` oraz relację czasu bieżącego `teraz` do
-przedziału czasowego `[reservationStartDate, reservationEndDate]`, z uwzględnieniem parametrów obiektu `Parking`
-(`maxReservationTimeInAdvance`, `maxReservationDuration`, `minCancellationTimeInAdvance`).
+Cykl życia obiektu `Reservation` wyznaczany jest przez atrybut `isPaid` oraz relację czasu bieżącego `teraz` do przedziału czasowego `[reservationStartDate, reservationEndDate]`, z uwzględnieniem parametrów obiektu `Parking` (`maxReservationTimeInAdvance`, `maxReservationDuration`, `minCancellationTimeInAdvance`).
 
 ```mermaid
 stateDiagram-v2
@@ -90,29 +85,19 @@ stateDiagram-v2
 | T6        | System: rozpocznij rezerwację (wyzwalane czasowo) / `teraz ≥ start` oraz `isPaid = true`                                                                                                                                                                                                                                                                                                                                  |
 | T7        | System: zakończ rezerwację (wyzwalane czasowo) / `teraz ≥ koniec`                                                                                                                                                                                                                                                                                                                                                         |
 
-Wjazdy i wyjazdy pojazdu nie modyfikują stanu samej Rezerwacji - stan *Aktywna* uprawnia pojazd do wjazdu i wyjazdu w
-zdefiniowanym oknie czasowym bez naliczania dodatkowych opłat, co odzwierciedla diagram postoju Pojazdu (przejścia P1,
-P3). Rozpoczęcie (T6) oraz zakończenie (T7) rezerwacji synchronizują stan postoju pojazdu na parkingu (przejścia P8 i
-P4).
+Wjazdy i wyjazdy pojazdu nie modyfikują stanu samej Rezerwacji - stan *Aktywna* uprawnia pojazd do wjazdu i wyjazdu w zdefiniowanym oknie czasowym bez naliczania dodatkowych opłat, co odzwierciedla diagram postoju Pojazdu (przejścia P1, P3). Rozpoczęcie (T6) oraz zakończenie (T7) rezerwacji synchronizują stan postoju pojazdu na parkingu (przejścia P8 i P4).
 
-*Wariant jednofazowy:* Jeżeli w architekturze systemu płatność pobierana jest atomowo podczas składania rezerwacji, stan
-*Nieopłacona* oraz przejścia T2, T3 i T4 nie występują, a akcja T1 tworzy obiekt od razu z flagą `isPaid = true` w
-stanie *Opłacona*.
+*Wariant jednofazowy:* Jeżeli w architekturze systemu płatność pobierana jest atomowo podczas składania rezerwacji, stan *Nieopłacona* oraz przejścia T2, T3 i T4 nie występują, a akcja T1 tworzy obiekt od razu z flagą `isPaid = true` w stanie *Opłacona*.
 
 ---
 
 **2. Pojazd – postój na Parkingu (`Vehicle`)**
 
-Cykl życia obecności Pojazdu opiera się wprost na rejestrowaniu zdarzeń w tabeli `ParkingEvents` (`EventType.ENTRY`,
-`EventType.EXIT`) powiązanych z danym `Vehicle` i `Parking`:
+Cykl życia obecności Pojazdu opiera się wprost na rejestrowaniu zdarzeń w tabeli `ParkingEvents` (`EventType.ENTRY`, `EventType.EXIT`) powiązanych z danym `Vehicle` i `Parking`:
 
-* Pojazd bez przypisanego klienta (`client == null` w klasie `Vehicle`) reprezentuje pojazd **Gościa** (użytkownika
-  niezarejestrowanego/anonimowego), co bezpośrednio realizuje krotność `0..1` relacji `Vehicle` z `Client`.
-* Fizyczna obecność na terenie parkingu wynika z faktu, że ostatnim zarejestrowanym zdarzeniem w `ParkingEvents` dla
-  danego pojazdu i parkingu jest `ENTRY`.
-* Zdarzenia szlabanowe `ENTRY` i `EXIT` są trwale rejestrowane w bazie (`ParkingEvents`), natomiast uiszczenie opłaty za
-  postój w terminalu (P5) stanowi autoryzację wyjazdu ważną przez dopuszczalny czas na opuszczenie parkingu
-  (`EXIT_GRACE_PERIOD`).
+* Pojazd bez przypisanego klienta (`client == null` w klasie `Vehicle`) reprezentuje pojazd **Gościa** (użytkownika niezarejestrowanego/anonimowego), co bezpośrednio realizuje krotność `0..1` relacji `Vehicle` z `Client`.
+* Fizyczna obecność na terenie parkingu wynika z faktu, że ostatnim zarejestrowanym zdarzeniem w `ParkingEvents` dla danego pojazdu i parkingu jest `ENTRY`.
+* Zdarzenia szlabanowe `ENTRY` i `EXIT` są trwale rejestrowane w bazie (`ParkingEvents`), natomiast uiszczenie opłaty za postój w terminalu (P5) stanowi autoryzację wyjazdu ważną przez dopuszczalny czas na opuszczenie parkingu (`EXIT_GRACE_PERIOD`).
 
 ```mermaid
 stateDiagram-v2
@@ -143,9 +128,6 @@ stateDiagram-v2
 | P7        | System: przekroczono czas na wyjazd (wyzwalane czasowo) / `teraz − czas_opłacenia > EXIT_GRACE_PERIOD` przy braku zdarzenia `EXIT`. Autoryzacja wygasa i następuje powrót do naliczania opłaty za dodatkowy czas postoju                                                                                                                                              |
 | P8        | System: rozpocznij rezerwację (wyzwalane czasowo przez T6) / `teraz ≥ start`, a pojazd znajduje się już na parkingu (ostatnim zdarzeniem jest `ENTRY`). Ewentualna opłata za wcześniejszy postój (od wjazdu do `start`) zostaje doliczona do rozliczenia Klienta, a dalszy postój przechodzi pod aktywną rezerwację                                                   |
 
-Odmowa wjazdu (brak wolnego miejsca dla pojazdu bez rezerwacji przy wyczerpaniu puli z `parking.capacity`) nie powoduje
-zmiany stanu – pojazd pozostaje w stanie *Poza parkingiem*, a zdarzenie w `ParkingEvents` nie jest rejestrowane.
+Odmowa wjazdu (brak wolnego miejsca dla pojazdu bez rezerwacji przy wyczerpaniu puli z `parking.capacity`) nie powoduje zmiany stanu – pojazd pozostaje w stanie *Poza parkingiem*, a zdarzenie w `ParkingEvents` nie jest rejestrowane.
 
-Stan postoju nie wymaga osobnego atrybutu w klasie `Vehicle` - wynika bezpośrednio z korelacji ostatniego
-zarejestrowanego zdarzenia `ParkingEvents` danego pojazdu na danym obiekcie `Parking` oraz stanu powiązanego obiektu
-`Reservation`.
+Stan postoju nie wymaga osobnego atrybutu w klasie `Vehicle` - wynika bezpośrednio z korelacji ostatniego zarejestrowanego zdarzenia `ParkingEvents` danego pojazdu na danym obiekcie `Parking` oraz stanu powiązanego obiektu `Reservation`.
