@@ -74,7 +74,7 @@ func main() {
 	log.Fatal(api.NewRouter(reservations).Run(":8080"))
 }
 ```
-Listing 2.3.1 Utworzenie puli połączeń z bazą w pakiecie `main`
+Listing 2.3.1 - Utworzenie puli połączeń z bazą w pakiecie `main`
 
 Metoda `Create` z pakietu `reservation`, którą wywołuje handler `POST /api/reservations`. Realizuje
 ona tworzenie rezerwacji w jednej transakcji.
@@ -106,8 +106,6 @@ type parkingLimits struct {
 	MaxDurationMin int `db:"max_reservation_duration_min"`
 	MaxAdvanceMin  int `db:"max_reservation_time_in_advance_min"`
 }
-
-var ErrClientLimit = errors.New("reservation: client reservation limit reached")
 
 type Service struct {
 	db                    *sqlx.DB
@@ -213,7 +211,7 @@ func (s *Service) Create(ctx context.Context, clientID uuid.UUID, req CreateRequ
 	return r, nil
 }
 ```
-Listing 2.3.2 Utworzenie rezerwacji w bazie w pakiecie `reservation`
+Listing 2.3.2 - Utworzenie rezerwacji w bazie w pakiecie `reservation`
 
 Struktura `Reservation` odpowiada wierszowi tabeli `reservation`. Tagi `db` łączą pola struktury z kolumnami tabeli,
 dzięki czemu `sqlx` sam wypełnia struktury wynikami zapytań (`GetContext`) i podstawia ich pola do zapytań z

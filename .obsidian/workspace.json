@@ -8,7 +8,7 @@
         "type": "tabs",
         "children": [
           {
-            "id": "f37c005af4e7fc02",
+            "id": "4b65c475d8a3dd3f",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -22,17 +22,17 @@
             }
           },
           {
-            "id": "ff3a37fb2be01b99",
+            "id": "95e7412f7622a95e",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "etap1/12funkcjonalne.md",
+                "file": "etap1/11model.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "12funkcjonalne"
+              "title": "11model"
             }
           }
         ],
@@ -114,7 +114,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "etap1/12funkcjonalne.md",
+                "file": "etap1/11model.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -133,7 +133,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "etap1/12funkcjonalne.md",
+                "file": "etap1/11model.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -176,7 +176,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "etap1/12funkcjonalne.md",
+                "file": "etap1/11model.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -203,11 +203,24 @@
       "bases:Create new base": false
     }
   },
-  "active": "ff3a37fb2be01b99",
+  "active": "95e7412f7622a95e",
   "lastOpenFiles": [
-    "etap1/11model.md",
+    "etap2/21architektura.md",
+    "etap2/img/wdrozenie.png",
+    "etap2/img",
+    "etap2/24infrastruktura.md",
+    "etap2/23warstwadanych.md",
+    "etap2/22warstwalogiki.md",
+    "etap3/32wspolbiezne.md",
+    "etap3/31uwierzytelnianie.md",
     "ProjektKompetencyjnyIAS202601.md",
     "etap1/12funkcjonalne.md",
+    "etap1/11model.md",
+    "etap1/img/terminal.png",
+    "etap1/img/system.png",
+    "etap1/img/klient.png",
+    "etap1/img/gosc.png",
+    "etap1/img/administrator.png",
     "etap1/img/Parking Reservation Domain Model-2026-10-24-131529.png",
     "etap1/img/Unconfirmed 912188.crdownload",
     "etap1/img",

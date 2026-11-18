@@ -3,7 +3,7 @@
 
 ![wdrozenie.png](img/wdrozenie.png)
 
-Wykres 3.1.1 - Diagram perspektywy wdrożenia
+Wykres 2.1.1 - Diagram perspektywy wdrożenia
 
 *Stan konwersacyjny*
 
@@ -85,7 +85,7 @@ flowchart LR
     DB -.replikacja.-> R
 ```
 
-Wykres 3.4.1 - Skalowanie horyzontalne warstwy logiki systemu
+Wykres 2.1.2 - Skalowanie horyzontalne warstwy logiki systemu
 
 **1. Warstwa prezentacji (SPA)**
 
@@ -102,7 +102,7 @@ jest spełniony:
 * stan konwersacyjny przechowuje klient - każde żądanie niesie token dostępu (JWT, zob. rozdz. 7), który każda instancja
   weryfikuje samodzielnie na podstawie wspólnego klucza. Nie jest potrzebna sesja HTTP po stronie serwera ani
   mechanizm *sticky sessions* na load balancerze,
-* stan dziedzinowy (rezerwacje, zdarzenia `ParkingEvents`, autoryzacja wyjazdu po opłaceniu postoju - P5) jest
+* stan dziedzinowy (rezerwacje, zdarzenia w tabeli `parking_events`, autoryzacja wyjazdu po opłaceniu postoju - P5) jest
   utrwalany w bazie danych, a nie w pamięci instancji,
 * dane ulotne (bieżąca zajętość, liczba wolnych miejsc) są wyliczane na żądanie z bazy, więc każda instancja otrzymuje
   ten sam wynik.
@@ -116,10 +116,10 @@ Skalowanie horyzontalne wymusza jednak kilka decyzji projektowych:
 
 | Problem                                                     | Skutek przy N instancjach                                                                                                                       | Rozwiązanie                                                                                                                                                                                                                     |
 |-------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Kontrola limitu miejsc (T1, P2)                             | Blokady w pamięci procesu (np. `synchronized`) chronią tylko w obrębie jednej instancji. Dwie instancje mogą jednocześnie przekroczyć `capacity` | Synchronizacja na poziomie bazy danych: blokada pesymistyczna wiersza `Parking` (`SELECT ... FOR UPDATE`) lub blokada optymistyczna z wersjonowaniem (szczegóły w rozdz. 8)                                                    |
-| Zadania wyzwalane czasowo (T4, T6, T7, P4, P7)              | Harmonogram uruchomiony w każdej instancji wykona to samo zadanie N razy (np. wielokrotne anulowanie lub zwrot środków)                          | Rozproszona blokada zadania (np. ShedLock oparty o tabelę w bazie) albo wydzielona pojedyncza instancja *worker*; dodatkowo operacje warunkowe, np. `UPDATE ... WHERE isPaid = false AND ...`, dzięki czemu powtórzenie nic nie zmienia |
+| Kontrola limitu miejsc (T1, P2)                             | Blokady w pamięci procesu (np. `sync.Mutex`) chronią tylko w obrębie jednej instancji. Dwie instancje mogą jednocześnie przekroczyć `capacity`   | Synchronizacja na poziomie bazy danych: blokada wiersza parkingu w tabeli `parking` (`SELECT ... FOR UPDATE`) w transakcji tworzącej rezerwację (zob. rozdz. 5)                                                               |
+| Zadania wyzwalane czasowo (T4, T6, T7, P4, P7)              | Harmonogram uruchomiony w każdej instancji wykona to samo zadanie N razy (np. wielokrotne anulowanie lub zwrot środków)                          | Zadania działają w każdej instancji `parking-api` (`time.Ticker`), ale przed wykonaniem instancja pobiera blokadę doradczą w bazie (`pg_try_advisory_xact_lock` z identyfikatorem zadania). Zadanie wykonuje tylko instancja, której się to udało, a pozostałe pomijają ten cykl. Dodatkowo operacje są warunkowe, np. `UPDATE ... WHERE is_paid = false AND ...`, dzięki czemu powtórzenie nic nie zmienia |
 | Ponowienie żądania przez terminal                           | Terminal po przekroczeniu czasu odpowiedzi może ponowić zgłoszenie wjazdu do innej instancji, co da zdublowane zdarzenie `ENTRY`                | Idempotentny endpoint: terminal przesyła unikalny identyfikator zdarzenia (klucz idempotencji), a baza ma na nim ograniczenie unikalności                                                                                     |
-| Pamięć podręczna (cache)                                    | Lokalny cache każdej instancji może zwracać nieaktualną zajętość parkingu                                                                       | Nie buforować danych zmiennych (zajętość) albo użyć współdzielonego cache (np. Redis) z unieważnianiem przy zapisie. Lokalny cache tylko dla danych rzadko zmienianych (parametry `Parking`)                                    |
+| Pamięć podręczna (cache)                                    | Lokalny cache każdej instancji może zwracać nieaktualną zajętość parkingu                                                                       | Nie buforować danych zmiennych (zajętość) albo użyć współdzielonego cache (np. Redis) z unieważnianiem przy zapisie. Lokalny cache tylko dla danych rzadko zmienianych (wiersz tabeli `parking`)                                    |
 | Klucz podpisu tokenów, konfiguracja                         | Token wydany przez jedną instancję musi być akceptowany przez pozostałe                                                                         | Wspólny klucz/para kluczy i konfiguracja wstrzykiwane wszystkim instancjom (zmienne środowiskowe, menedżer sekretów)                                                                                                         |
 | Identyfikatory encji                                        | Liczniki generowane w pamięci instancji kolidowałyby ze sobą                                                                                   | Identyfikatory `UUID` (zgodnie z modelem danych) generowane niezależnie w każdej instancji                                                                                                                                    |
 
@@ -135,14 +135,14 @@ reguły limitu miejsc muszą być sprawdzane na aktualnych danych. Dlatego zapis
   (wolne miejsca przy T1 i P2), muszą trafiać do instancji głównej, bo replikacja wprowadza opóźnienie,
 * **pula połączeń** - przy N instancjach API łączna liczba połączeń rośnie N-krotnie, więc należy ograniczyć pule
   w instancjach lub zastosować pośrednika (np. PgBouncer),
-* **partycjonowanie (sharding) według `parkingId`** - wszystkie reguły biznesowe (pojemność, limity czasowe, zajętość)
+* **partycjonowanie (sharding) według `parking_id`** - wszystkie reguły biznesowe (pojemność, limity czasowe, zajętość)
   dotyczą pojedynczego parkingu, więc dane różnych parkingów można by rozdzielić między niezależne bazy bez transakcji
   rozproszonych. Jest to naturalna ścieżka rozwoju przy bardzo dużej liczbie parkingów, ale przy obecnej skali
   niepotrzebna,
 * **replikacja z automatycznym przełączaniem (failover)** - służy przede wszystkim dostępności, a nie wydajności.
 
-Tabela `ParkingEvents` rośnie stale, a bieżąca zajętość jest z niej wyliczana. Aby ten odczyt nie spowalniał się wraz
-z historią, należy zastosować indeks (`parkingId`, `vehicleId`, `eventTime`) oraz ewentualnie partycjonowanie tabeli
+Tabela `parking_events` rośnie stale, a bieżąca zajętość jest z niej wyliczana. Aby ten odczyt nie spowalniał się wraz
+z historią, należy zastosować indeks (`parking_id`, `vehicle_id`, `event_time`) oraz ewentualnie partycjonowanie tabeli
 po czasie i archiwizację starych zdarzeń.
 
 **4. Ocena końcowa**
@@ -151,9 +151,9 @@ po czasie i archiwizację starych zdarzeń.
 |------------------------------|-------------------------|-------------------------------------------------------------------------------|
 | SPA (pliki statyczne)        | Pełne                   | Serwer plików / CDN                                                           |
 | REST API (warstwa logiki)    | Pełne                   | Bezstanowe instancje za load balancerem, blokady i idempotencja po stronie bazy |
-| Zadania wyzwalane czasowo    | Ograniczone             | Jedno wykonanie na raz (rozproszona blokada lub wydzielony worker)             |
+| Zadania wyzwalane czasowo    | Ograniczone             | Jedno wykonanie na raz dzięki blokadzie doradczej w bazie                      |
 | Baza danych - odczyty        | Możliwe                 | Repliki do odczytu dla zapytań raportowych                                    |
-| Baza danych - zapisy         | Ograniczone             | Jedna instancja główna; w przyszłości sharding po `parkingId`                 |
+| Baza danych - zapisy         | Ograniczone             | Jedna instancja główna; w przyszłości sharding po `parking_id`                |
 
 Zaproponowana architektura pozwala na skalowanie horyzontalne warstwy logiki bez zmian w kodzie biznesowym, o ile od
 początku zachowa się wymienione zasady: brak stanu w pamięci instancji, kontrola współbieżności w bazie danych,

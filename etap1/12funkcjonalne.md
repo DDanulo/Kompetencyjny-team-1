@@ -126,7 +126,6 @@ stateDiagram-v2
     Oplacony --> PostojPlatny: P7
     PostojPlatny --> NaParkinguRezerwacja: P8
     Oplacony --> NaParkinguRezerwacja: P8
-    PozaParkingiem --> [*]
     state "Poza parkingiem" as PozaParkingiem
     state "Na parkingu – w ramach rezerwacji" as NaParkinguRezerwacja
     state "Na parkingu – postój płatny" as PostojPlatny

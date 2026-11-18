@@ -17,7 +17,8 @@ jej tworzenia z wyprzedzeniem i anulowania. System wiąże z nim rezerwacje i zd
 
 **Rezerwacja (Reservation)** - gwarancja dostępności miejsca na danym parkingu dla jednego pojazdu w określonym czasie.
 Obowiązuje od `reservationStartDate` do `reservationEndDate`. Pole `isPaid` określa, czy rezerwacja jest opłacona. 
-Opłacona rezerwacja umożliwia wielokrotne wjazdy i wyjazdy w tym przedziale bez dodatkowych opłat.
+Opłacona rezerwacja umożliwia wielokrotne wjazdy i wyjazdy w tym przedziale bez dodatkowych opłat. 
+Pole `cancelledAt` zawiera chwilę anulowania rezerwacji. Puste pole oznacza, że rezerwacja nie została anulowana.
 
 **Zdarzenie parkingowe (ParkingEvents)** - zapis pojedynczego wjazdu pojazdu na parking albo wyjazdu z niego. 
 System zapisuje pojazd, parking, czas wystąpienia (`eventTime`) i typ zdarzenia (`eventType`). 
@@ -55,7 +56,6 @@ parkingu. Rezerwacja wskazuje parking, **BEZ** przypisania do konkretnego stanow
 odbyć kilka postojów. Zakończenie rezerwacji nie kończy trwającego postoju, a pojazd zajmuje miejsce na parkingu aż do 
 wyjazdu.
 
-*Diagram klas modelu*
 
 ```mermaid
 classDiagram
@@ -82,6 +82,7 @@ classDiagram
       +DateTime reservationStartDate
       +DateTime reservationEndDate
       +Boolean isPaid
+      +DateTime cancelledAt
     }
     class ParkingEvents{
       +UUID eventId
@@ -102,3 +103,5 @@ classDiagram
     ParkingEvents ..> EventType
     ParkingEvents "0..*" --> "1" Parking
 ```
+
+Rysunek 1.1.1 - Diagram klas modelu dziedzinowego
